@@ -1,10 +1,10 @@
-﻿using UnityEngine;
+using UnityEngine;
 using TMPro;
 
 public class FrameRateCounter : MonoBehaviour {
 
 	[SerializeField]
-	TextMeshProUGUI display = default;
+	TextMeshProUGUI display;
 
 	public enum DisplayMode { FPS, MS }
 

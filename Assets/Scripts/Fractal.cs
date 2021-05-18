@@ -1,4 +1,4 @@
-﻿using Unity.Burst;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -29,10 +29,9 @@ public class Fractal : MonoBehaviour {
 			FractalPart part = parts[i];
 			part.spinAngle += part.spinVelocity * deltaTime;
 
-			float3 upAxis =
-				mul(mul(parent.worldRotation, part.rotation), up());
+			float3 upAxis = mul(mul(parent.worldRotation, part.rotation), up());
 			float3 sagAxis = cross(up(), upAxis);
-
+			
 			float sagMagnitude = length(sagAxis);
 			quaternion baseRotation;
 			if (sagMagnitude > 0f) {
@@ -70,28 +69,28 @@ public class Fractal : MonoBehaviour {
 		matricesId = Shader.PropertyToID("_Matrices"),
 		sequenceNumbersId = Shader.PropertyToID("_SequenceNumbers");
 
-	static MaterialPropertyBlock propertyBlock;
-
 	static quaternion[] rotations = {
 		quaternion.identity,
 		quaternion.RotateZ(-0.5f * PI), quaternion.RotateZ(0.5f * PI),
 		quaternion.RotateX(0.5f * PI), quaternion.RotateX(-0.5f * PI)
 	};
 
+	static MaterialPropertyBlock propertyBlock;
+
 	[SerializeField, Range(3, 8)]
 	int depth = 4;
 
 	[SerializeField]
-	Mesh mesh = default, leafMesh = default;
+	Mesh mesh, leafMesh;
 
 	[SerializeField]
-	Material material = default;
+	Material material;
 
 	[SerializeField]
-	Gradient gradientA = default, gradientB = default;
+	Gradient gradientA, gradientB;
 
 	[SerializeField]
-	Color leafColorA = default, leafColorB = default;
+	Color leafColorA, leafColorB;
 
 	[SerializeField, Range(0f, 90f)]
 	float maxSagAngleA = 15f, maxSagAngleB = 25f;
@@ -120,9 +119,8 @@ public class Fractal : MonoBehaviour {
 			parts[i] = new NativeArray<FractalPart>(length, Allocator.Persistent);
 			matrices[i] = new NativeArray<float3x4>(length, Allocator.Persistent);
 			matricesBuffers[i] = new ComputeBuffer(length, stride);
-			sequenceNumbers[i] = new Vector4(
-				Random.value, Random.value, Random.value, Random.value
-			);
+			sequenceNumbers[i] =
+				new Vector4(Random.value, Random.value, Random.value, Random.value);
 		}
 
 		parts[0][0] = CreatePart(0);
@@ -135,9 +133,7 @@ public class Fractal : MonoBehaviour {
 			}
 		}
 
-		if (propertyBlock == null) {
-			propertyBlock = new MaterialPropertyBlock();
-		}
+		propertyBlock ??= new MaterialPropertyBlock();
 	}
 
 	void OnDisable () {
@@ -159,15 +155,13 @@ public class Fractal : MonoBehaviour {
 		}
 	}
 
-	FractalPart CreatePart (int childIndex) {
-		return new FractalPart {
-			maxSagAngle = radians(Random.Range(maxSagAngleA, maxSagAngleB)),
-			rotation = rotations[childIndex],
-			spinVelocity =
-				(Random.value < reverseSpinChance ? -1f : 1f) *
-				radians(Random.Range(spinSpeedA, spinSpeedB))
-		};
-	}
+	FractalPart CreatePart (int childIndex) => new FractalPart {
+		maxSagAngle = radians(Random.Range(maxSagAngleA, maxSagAngleB)),
+		rotation = rotations[childIndex],
+		spinVelocity =
+			(Random.value < reverseSpinChance ? -1f : 1f) *
+			radians(Random.Range(spinSpeedA, spinSpeedB))
+	};
 
 	void Update () {
 		float deltaTime = Time.deltaTime;
@@ -197,7 +191,6 @@ public class Fractal : MonoBehaviour {
 		jobHandle.Complete();
 
 		var bounds = new Bounds(rootPart.worldPosition, 3f * objectScale * Vector3.one);
-
 		int leafIndex = matricesBuffers.Length - 1;
 		for (int i = 0; i < matricesBuffers.Length; i++) {
 			ComputeBuffer buffer = matricesBuffers[i];

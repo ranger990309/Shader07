@@ -33,42 +33,44 @@ public class Fractal : MonoBehaviour {
             // 算出要更新的自旋角度
             part.spinAngle += part.spinVelocity * deltaTime;
 
-            // 计算上轴方向
-            float3 upAxis = mul(mul(parent.worldRotation, part.rotation), up());
-            // 计算下垂轴（通过叉积获取垂直于up和upAxis的向量）
-            float3 sagAxis = cross(up(), upAxis);
+            float3 upAxis = mul(mul(parent.worldRotation, part.rotation), up());//父球局部Y轴和世界Y轴的差
+            float3 sagAxis = cross(up(), upAxis);//下垂向量:父球局部Y轴与世界Y轴向量的叉积，表示节点应该向哪个方向下垂
             
-            // 计算下垂幅度
-            float sagMagnitude = length(sagAxis);
+            float sagMagnitude = length(sagAxis);//算出下垂向量的长度
             quaternion baseRotation;
             
-            // 根据下垂幅度计算基础旋转
+            //如果 sagMag>0，生成绕 sagAxis 的小角度旋转 sagRot，并乘以父节点的世界旋转；否则直接用父旋转
             if (sagMagnitude > 0f) {
                 sagAxis /= sagMagnitude;  // 归一化
                 // 基于下垂轴和最大下垂角度创建旋转
+                //这一行在做的是“创建一个绕某根轴的旋转”
+                // sagAxis：表示分支应该向哪个方向“下垂”的轴（它是全局 up 向量和父分支局部“上”向量的叉积、再归一化得到的方向）。
+                // part.maxSagAngle：该分支允许的最小和最大下垂角度范围（在 Inspector 中配置的弧度值）。
+                // sagMagnitude：分支当前偏离垂直的程度（0~1 之间），越偏离垂直，下垂越明显。
+                // 把它们相乘 part.maxSagAngle * sagMagnitude 得到本帧实际的下垂角度，
+                // 然后传给quaternion.AxisAngle(axis, angle)就会返回一个四元数，表示绕 axis 旋转 angle 弧度的变换。
+                // 这个 sagRotation 再与父节点的 worldRotation 相乘，就可以让子分支既继承父旋转又带有向下弯曲（sag）的效果。
                 quaternion sagRotation =
                     quaternion.AxisAngle(sagAxis, part.maxSagAngle * sagMagnitude);
-                baseRotation = mul(sagRotation, parent.worldRotation);
+                baseRotation = mul(sagRotation, parent.worldRotation);//sagRotation就是重力偏移
             }
             else {
-                // 如果没有下垂，使用父旋转
+                // 下垂向量长度为0说明没有下垂，使用父旋转
                 baseRotation = parent.worldRotation;
             }
 
-            // 计算最终世界旋转 = 基础旋转 * 自身旋转 * Y轴自旋
+            //先本地旋转＋自旋,再把上一步的结果，乘上父节点的基础旋转（包括继承的世界旋转＋下垂偏移），得出最终 worldRotation
             part.worldRotation = mul(baseRotation,
-                mul(part.rotation, quaternion.RotateY(part.spinAngle))
+                mul(part.rotation, quaternion.RotateY(part.spinAngle))//本地旋转＋自旋
             );
             
-            // 计算世界位置 = 父位置 + 相对于父级的偏移
+            // 7. 计算世界位置 = 父级位置 + 本地偏移(沿 local Y 轴 * 1.5 * scale)
             part.worldPosition =
                 parent.worldPosition +
                 mul(part.worldRotation, float3(0f, 1.5f * scale, 0f));
                 
-            // 更新部分数据
             parts[i] = part;
 
-            // 创建用于实例化渲染的变换矩阵
             float3x3 r = float3x3(part.worldRotation) * scale;
             matrices[i] = float3x4(r.c0, r.c1, r.c2, part.worldPosition);
         }

@@ -2,6 +2,7 @@
 	StructuredBuffer<float3x4> _Matrices;
 #endif
 
+//实例化会使用到这个函数,不过在这个项目里实例化会假设缩放是均匀的
 void ConfigureProcedural () {
 	#if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
 		float3x4 m = _Matrices[unity_InstanceID];
